@@ -1,1 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRO Split Test Tracker</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface-2: #242836;
+      --border: #2e3345;
+      --text: #e4e6ef;
+      --text-muted: #8b8fa3;
+      --accent: #6c5ce7;
+      --accent-hover: #7c6ff7;
+      --success: #00b894;
+      --danger: #e17055;
+      --warning: #fdcb6e;
+      --info: #74b9ff;
+      --running: #a29bfe;
+      --radius: 10px;
+    }
 
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      gap: 16px;
+    }
+    .header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; white-space: nowrap; }
+    .header h1 span { color: var(--accent); }
+    .header-nav {
+      display: flex;
+      gap: 3px;
+      background: var(--bg);
+      padding: 3px;
+      border-radius: 8px;
+    }
+    .header-tab {
+      padding: 7px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      transition: all 0.15s;
+    }
+    .header-tab.active { background: var(--accent); color: #fff; }
+    .header-tab:hover:not(.active) { color: var(--text); }
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+
+    /* Buttons */
+    .btn {
+      padding: 9px 18px; border-radius: 8px; border: none;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: var(--surface-2); color: var(--text); }
+    .btn-sm { padding: 6px 12px; font-size: 13px; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { opacity: 0.85; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Layout */
+    .main { max-width: 1200px; margin: 0 auto; padding: 28px 32px; }
+
+    /* Stats Bar */
+    .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
+    .stat-card .label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 6px; }
+    .stat-card .value { font-size: 28px; font-weight: 700; }
+    .stat-card .value.success { color: var(--success); }
+    .stat-card .value.running { color: var(--running); }
+    .stat-card .value.info { color: var(--info); }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--surface); padding: 4px; border-radius: 10px; border: 1px solid var(--border); width: fit-content; }
+    .tab { padding: 8px 18px; border-radius: 7px; font-size: 14px; font-weight: 500; cursor: pointer; color: var(--text-muted); background: transparent; border: none; transition: all 0.15s; }
+    .tab.active { background: var(--accent); color: #fff; }
+    .tab:hover:not(.active) { color: var(--text); }
+    .tab .count { background: rgba(255,255,255,0.15); padding: 1px 7px; border-radius: 10px; font-size: 12px; margin-left: 5px; }
+
+    /* Table */
+    .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { text-align: left; padding: 14px 16px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text-muted); border-bottom: 1px solid var(--border); font-weight: 600; }
+    tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface-2); }
+    tbody td { padding: 14px 16px; font-size: 14px; vertical-align: top; }
+
+    /* Badges */
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .badge-idea { background: rgba(116,185,255,0.15); color: var(--info); }
+    .badge-running { background: rgba(162,155,254,0.15); color: var(--running); }
+    .badge-success { background: rgba(0,184,148,0.15); color: var(--success); }
+    .badge-failed { background: rgba(225,112,85,0.15); color: var(--danger); }
+    .badge-inconclusive { background: rgba(253,203,110,0.15); color: var(--warning); }
+    .week-label { font-size: 13px; color: var(--text-muted); }
+    .hypothesis-text { max-width: 320px; line-height: 1.45; }
+
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; width: 620px; max-height: 90vh; overflow-y: auto; padding: 28px; }
+    .modal h2 { font-size: 20px; margin-bottom: 22px; font-weight: 700; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%; padding: 9px 12px; background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: 14px; font-family: inherit; outline: none; transition: border 0.15s;
+    }
+    .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--accent); }
+    .form-group textarea { resize: vertical; min-height: 70px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+    /* Variants in modal */
+    .variant-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .variant-row .v-label { font-weight: 700; font-size: 14px; color: var(--accent); min-width: 22px; }
+    .variant-row input { flex: 1; padding: 8px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; font-family: inherit; outline: none; }
+    .variant-row input:focus { border-color: var(--accent); }
+    .variant-remove { width: 28px; height: 28px; border-radius: 6px; border: none; background: rgba(225,112,85,0.15); color: var(--danger); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .variant-remove:hover { background: rgba(225,112,85,0.3); }
+
+    /* Detail Panel */
+    .detail-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); z-index: 200; }
+    .detail-overlay.open { display: block; }
+    .detail-panel { position: fixed; top: 0; right: -620px; width: 580px; height: 100vh; background: var(--surface); border-left: 1px solid var(--border); z-index: 201; overflow-y: auto; transition: right 0.25s ease; padding: 28px; }
+    .detail-panel.open { right: 0; }
+    .detail-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+    .detail-section { margin-bottom: 22px; }
+    .detail-section h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text-muted); margin-bottom: 8px; }
+    .detail-section p { font-size: 14px; line-height: 1.6; color: var(--text); }
+    .detail-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 24px; padding: 16px; background: var(--surface-2); border-radius: var(--radius); }
+    .detail-meta .meta-item .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); margin-bottom: 4px; }
+    .detail-meta .meta-item .value { font-size: 14px; font-weight: 600; }
+    .variant-card { background: var(--surface-2); padding: 12px; border-radius: 8px; border-left: 3px solid var(--accent); }
+    .variant-card.control-card { border-left-color: var(--info); }
+    .variant-card .card-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); margin-bottom: 4px; }
+
+    /* Meeting Notes */
+    .notes-list { display: flex; flex-direction: column; gap: 12px; }
+    .note-item { background: var(--surface-2); padding: 14px; border-radius: 8px; border-left: 3px solid var(--accent); }
+    .note-item .note-date { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .note-item .note-text { font-size: 14px; line-height: 1.5; }
+    .add-note-area { margin-top: 12px; display: flex; gap: 8px; }
+    .add-note-area textarea { flex: 1; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px; font-family: inherit; resize: none; height: 60px; outline: none; }
+    .add-note-area textarea:focus { border-color: var(--accent); }
+    .detail-actions { display: flex; gap: 8px; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
+
+    /* Empty State */
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+    .empty-state h3 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+    .empty-state p { font-size: 14px; margin-bottom: 20px; }
+
+    /* Dashboard */
+    .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+    .chart-card h3 { font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 16px; }
+    .chart-card canvas { width: 100%; height: 260px; }
+
+    /* AI Suggestions */
+    .suggestion-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 12px; transition: border-color 0.15s; }
+    .suggestion-card:hover { border-color: var(--accent); }
+    .suggestion-card h4 { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+    .suggestion-card p { font-size: 14px; line-height: 1.5; color: var(--text-muted); margin-bottom: 12px; }
+    .suggestion-meta { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+    .suggestion-meta span { background: var(--surface-2); padding: 3px 8px; border-radius: 4px; }
+
+    /* Delete confirmation */
+    .confirm-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 300; align-items: center; justify-content: center; }
+    .confirm-overlay.open { display: flex; }
+    .confirm-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; max-width: 380px; text-align: center; }
+    .confirm-box h3 { margin-bottom: 10px; }
+    .confirm-box p { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
+    .confirm-box .actions { display: flex; gap: 10px; justify-content: center; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .stats-bar { grid-template-columns: repeat(2, 1fr); }
+      .header { padding: 12px 16px; flex-wrap: wrap; }
+      .main { padding: 20px; }
+      .modal { width: 95%; padding: 20px; }
+      .detail-panel { width: 100%; }
+      .form-row, .form-row-3 { grid-template-columns: 1fr; }
+      .chart-grid { grid-template-columns: 1fr; }
+      .header-nav { order: 3; width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <h1><span>CRO</span> Split Test Tracker</h1>
+    <div class="header-nav">
+      <button class="header-tab active" id="nav-tests" onclick="switchView('tests')">Tests</button>
+      <button class="header-tab" id="nav-dashboard" onclick="switchView('dashboard')">Dashboard</button>
+      <button class="header-tab" id="nav-ai" onclick="switchView('ai')">AI Suggestions</button>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-sm" onclick="exportData()">Export</button>
+      <button class="btn btn-primary btn-sm" onclick="openNewTestModal()">+ New Test</button>
+    </div>
+  </div>
+
+  <!-- VIEW: Tests -->
+  <div id="view-tests">
+    <div class="main">
+      <div class="stats-bar">
+        <div class="stat-card"><div class="label">Total Tests</div><div class="value info" id="stat-total">0</div></div>
+        <div class="stat-card"><div class="label">Currently Running</div><div class="value running" id="stat-running">0</div></div>
+        <div class="stat-card"><div class="label">Successful</div><div class="value success" id="stat-success">0</div></div>
+        <div class="stat-card"><div class="label">Win Rate</div><div class="value" id="stat-winrate" style="color:var(--warning)">0%</div></div>
+      </div>
+      <div class="tabs">
+        <button class="tab active" data-filter="all" onclick="setFilter('all', this)">All<span class="count" id="count-all">0</span></button>
+        <button class="tab" data-filter="idea" onclick="setFilter('idea', this)">Ideas<span class="count" id="count-idea">0</span></button>
+        <button class="tab" data-filter="running" onclick="setFilter('running', this)">Running<span class="count" id="count-running">0</span></button>
+        <button class="tab" data-filter="completed" onclick="setFilter('completed', this)">Completed<span class="count" id="count-completed">0</span></button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Dates</th><th>Hypothesis</th><th>Page</th><th>Metric</th><th>Status</th><th>Result</th></tr></thead>
+          <tbody id="test-table-body"></tbody>
+        </table>
+        <div class="empty-state" id="empty-state" style="display:none;">
+          <h3>No tests yet</h3>
+          <p>Click "+ New Test" to add your first split test hypothesis.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW: Dashboard -->
+  <div id="view-dashboard" style="display:none;">
+    <div class="main">
+      <h2 style="margin-bottom:20px; font-size:20px;">Dashboard</h2>
+      <div class="stats-bar">
+        <div class="stat-card"><div class="label">Total Completed</div><div class="value info" id="dash-completed">0</div></div>
+        <div class="stat-card"><div class="label">Wins</div><div class="value success" id="dash-wins">0</div></div>
+        <div class="stat-card"><div class="label">Overall Win Rate</div><div class="value" id="dash-winrate" style="color:var(--warning)">0%</div></div>
+        <div class="stat-card"><div class="label">Avg Test Duration</div><div class="value" id="dash-avgduration" style="color:var(--info)">--</div></div>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3>Win Rate Over Time</h3>
+          <canvas id="chart-winrate"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Cumulative Test Outcomes</h3>
+          <canvas id="chart-outcomes"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW: AI Suggestions -->
+  <div id="view-ai" style="display:none;">
+    <div class="main">
+      <h2 style="margin-bottom:20px; font-size:20px;">AI Test Suggestions</h2>
+      <div class="stat-card" style="padding:20px; margin-bottom:20px;" id="ai-key-section">
+        <h3 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:10px;">Claude API Key</h3>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <input type="password" id="ai-api-key" placeholder="sk-ant-..."
+                 style="flex:1;padding:9px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-family:inherit;outline:none;">
+          <button class="btn btn-ghost btn-sm" onclick="saveApiKey()">Save Key</button>
+        </div>
+        <p style="font-size:12px; color:var(--text-muted); margin-top:8px;">Your key is stored locally in your browser and only sent to the Claude API.</p>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <p style="color:var(--text-muted); font-size:14px;">Generate test ideas based on your testing history.</p>
+        <button class="btn btn-primary" onclick="generateSuggestions()" id="ai-generate-btn">Generate Suggestions</button>
+      </div>
+      <div id="ai-loading" style="display:none; text-align:center; padding:40px; color:var(--text-muted);">
+        <div style="font-size:16px; margin-bottom:8px;">Analyzing your test history...</div>
+      </div>
+      <div id="ai-error" style="display:none;"></div>
+      <div id="ai-suggestions-list"></div>
+    </div>
+  </div>
+
+  <!-- New/Edit Test Modal -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+      <h2 id="modal-title">New Split Test</h2>
+      <input type="hidden" id="edit-id">
+
+      <div class="form-group">
+        <label>Hypothesis</label>
+        <textarea id="f-hypothesis" placeholder="e.g., Changing the CTA button color from blue to green will increase click-through rate by 10%"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>What are we testing?</label>
+        <input type="text" id="f-what" placeholder="e.g., CTA button color on pricing page">
+      </div>
+
+      <div class="form-group">
+        <label>Page / Element</label>
+        <input type="text" id="f-page" placeholder="e.g., /pricing - Hero CTA">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Primary Metric</label>
+          <select id="f-primary-metric" onchange="toggleCustomMetric('primary')">
+            <option value="">Select metric...</option>
+            <option value="Revenue per Visitor">Revenue per Visitor</option>
+            <option value="Opt-in Rate">Opt-in Rate</option>
+            <option value="Revenue per Page Viewer">Revenue per Page Viewer</option>
+            <option value="Attendance Rate">Attendance Rate</option>
+            <option value="other">Other (custom)...</option>
+          </select>
+          <input type="text" id="f-primary-metric-custom" placeholder="Enter custom metric..." style="display:none; margin-top:6px;">
+        </div>
+        <div class="form-group">
+          <label>Secondary Metric</label>
+          <select id="f-secondary-metric" onchange="toggleCustomMetric('secondary')">
+            <option value="">None</option>
+            <option value="Revenue per Visitor">Revenue per Visitor</option>
+            <option value="Opt-in Rate">Opt-in Rate</option>
+            <option value="Revenue per Page Viewer">Revenue per Page Viewer</option>
+            <option value="Attendance Rate">Attendance Rate</option>
+            <option value="other">Other (custom)...</option>
+          </select>
+          <input type="text" id="f-secondary-metric-custom" placeholder="Enter custom metric..." style="display:none; margin-top:6px;">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Control (A) - Description</label>
+        <input type="text" id="f-control-desc" placeholder="e.g., Current blue button">
+      </div>
+
+      <div class="form-group">
+        <label>Variants</label>
+        <div id="variants-container"></div>
+        <button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="addVariantRow()">+ Add Variant</button>
+      </div>
+
+      <div class="form-row-3">
+        <div class="form-group">
+          <label>Start Date</label>
+          <input type="date" id="f-start">
+        </div>
+        <div class="form-group">
+          <label>End Date</label>
+          <input type="date" id="f-end">
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="f-status">
+            <option value="idea">Idea (Backlog)</option>
+            <option value="running">Running</option>
+            <option value="success">Successful</option>
+            <option value="failed">Not Successful</option>
+            <option value="inconclusive">Inconclusive</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Control (A) - Result</label>
+        <input type="text" id="f-control-result" placeholder="e.g., 3.2% CTR">
+      </div>
+
+      <div id="variant-results-container"></div>
+
+      <div class="form-group">
+        <label>Confidence Level</label>
+        <input type="text" id="f-confidence" placeholder="e.g., 95%">
+      </div>
+
+      <div class="form-group">
+        <label>Key Takeaway / Learnings</label>
+        <textarea id="f-takeaway" placeholder="What did we learn from this test?"></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveTest()">Save Test</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail Panel -->
+  <div class="detail-overlay" id="detail-overlay" onclick="closeDetail()"></div>
+  <div class="detail-panel" id="detail-panel">
+    <div class="detail-header">
+      <h2 id="detail-title">Test Details</h2>
+      <button class="btn btn-ghost btn-sm" onclick="closeDetail()">Close</button>
+    </div>
+    <div id="detail-content"></div>
+  </div>
+
+  <!-- Delete Confirm -->
+  <div class="confirm-overlay" id="confirm-overlay">
+    <div class="confirm-box">
+      <h3>Delete this test?</h3>
+      <p>This action cannot be undone.</p>
+      <div class="actions">
+        <button class="btn btn-ghost" onclick="closeConfirm()">Cancel</button>
+        <button class="btn btn-danger" id="confirm-delete-btn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========== DATA LAYER ==========
+    const STORAGE_KEY = 'cro_split_tests';
+    const API_KEY_STORAGE = 'cro_claude_api_key';
+
+    function loadTests() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+      catch { return []; }
+    }
+    function saveTests(tests) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tests));
+    }
+    function generateId() {
+      return 'test_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+    }
+
+    // ========== DATA MIGRATION ==========
+    function migrateData() {
+      const VERSION_KEY = 'cro_data_version';
+      const CURRENT_VERSION = 2;
+      const version = parseInt(localStorage.getItem(VERSION_KEY)) || 1;
+      if (version >= CURRENT_VERSION) return;
+
+      let tests = loadTests();
+      tests = tests.map(test => {
+        if (typeof test.control === 'string' || test.control === undefined) {
+          const cDesc = test.control || '';
+          const cResult = test.controlResult || '';
+          const vDesc = test.variant || '';
+          const vResult = test.variantResult || '';
+          test.control = { description: cDesc, result: cResult };
+          test.variants = [{ id: generateId(), name: 'B', description: vDesc, result: vResult }];
+          if (test.metric && !test.primaryMetric) {
+            test.primaryMetric = test.metric;
+            test.secondaryMetric = '';
+          }
+          delete test.controlResult;
+          delete test.variantResult;
+          delete test.variant;
+          delete test.metric;
+        }
+        return test;
+      });
+      saveTests(tests);
+      localStorage.setItem(VERSION_KEY, CURRENT_VERSION.toString());
+    }
+
+    migrateData();
+
+    // ========== STATE ==========
+    let currentFilter = 'all';
+    let allTests = loadTests();
+
+    // ========== UTILS ==========
+    function escapeHtml(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+    function getWeekLabel(dateStr) {
+      if (!dateStr) return '\u2014';
+      const d = new Date(dateStr + 'T00:00:00');
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+    function getDateRange(start, end) {
+      const s = getWeekLabel(start);
+      const e = getWeekLabel(end);
+      if (s === '\u2014' && e === '\u2014') return '\u2014';
+      if (e === '\u2014') return s + ' \u2192';
+      return s + ' \u2013 ' + e;
+    }
+    function calculateDuration(startDate, endDate) {
+      if (!startDate || !endDate) return null;
+      const start = new Date(startDate + 'T00:00:00');
+      const end = new Date(endDate + 'T00:00:00');
+      const days = Math.round((end - start) / (1000 * 60 * 60 * 24));
+      if (days < 0) return 'Invalid';
+      if (days === 0) return 'Same day';
+      if (days < 7) return days + 'd';
+      const weeks = Math.round(days / 7);
+      if (days < 30) return weeks + 'w (' + days + 'd)';
+      return Math.round(days / 30) + 'mo (' + days + 'd)';
+    }
+    function parseNumeric(str) {
+      if (!str) return null;
+      const m = str.match(/-?[\d.]+/);
+      return m ? parseFloat(m[0]) : null;
+    }
+    function getVariantLetter(index) {
+      return String.fromCharCode(66 + index);
+    }
+
+    // ========== STATUS BADGES ==========
+    function getStatusBadge(status) {
+      const map = {
+        idea: '<span class="badge badge-idea">Idea</span>',
+        running: '<span class="badge badge-running">Running</span>',
+        success: '<span class="badge badge-success">Successful</span>',
+        failed: '<span class="badge badge-failed">Not Successful</span>',
+        inconclusive: '<span class="badge badge-inconclusive">Inconclusive</span>',
+      };
+      return map[status] || '';
+    }
+
+    function getResultText(test) {
+      if (test.status === 'idea' || test.status === 'running') return '\u2014';
+      const cRes = test.control?.result;
+      const parts = [];
+      if (cRes) parts.push('A: ' + cRes);
+      (test.variants || []).forEach(v => { if (v.result) parts.push(v.name + ': ' + v.result); });
+      return parts.length > 0 ? parts.join(' / ') : '\u2014';
+    }
+
+    function filteredTests() {
+      if (currentFilter === 'all') return [...allTests];
+      if (currentFilter === 'completed') return allTests.filter(t => ['success', 'failed', 'inconclusive'].includes(t.status));
+      return allTests.filter(t => t.status === currentFilter);
+    }
+
+    // ========== VIEW SWITCHING ==========
+    function switchView(view) {
+      document.getElementById('view-tests').style.display = view === 'tests' ? 'block' : 'none';
+      document.getElementById('view-dashboard').style.display = view === 'dashboard' ? 'block' : 'none';
+      document.getElementById('view-ai').style.display = view === 'ai' ? 'block' : 'none';
+      document.querySelectorAll('.header-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('nav-' + view).classList.add('active');
+      if (view === 'dashboard') renderDashboard();
+      if (view === 'ai') renderAIView();
+    }
+
+    // ========== RENDERING ==========
+    function render() {
+      const tbody = document.getElementById('test-table-body');
+      const empty = document.getElementById('empty-state');
+      const tests = filteredTests();
+
+      tests.sort((a, b) => {
+        const order = { running: 0, idea: 1, success: 2, failed: 3, inconclusive: 4 };
+        if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
+        return (b.startDate || '').localeCompare(a.startDate || '');
+      });
+
+      if (tests.length === 0) {
+        tbody.innerHTML = '';
+        empty.style.display = 'block';
+      } else {
+        empty.style.display = 'none';
+        tbody.innerHTML = tests.map(t => `
+          <tr onclick="openDetail('${t.id}')">
+            <td><span class="week-label">${getDateRange(t.startDate, t.endDate)}</span></td>
+            <td><div class="hypothesis-text">${escapeHtml(t.hypothesis || '\u2014')}</div></td>
+            <td>${escapeHtml(t.page || '\u2014')}</td>
+            <td style="font-size:12px;color:var(--text-muted);">${escapeHtml(t.primaryMetric || '\u2014')}</td>
+            <td>${getStatusBadge(t.status)}</td>
+            <td>${escapeHtml(getResultText(t))}</td>
+          </tr>
+        `).join('');
+      }
+      updateStats();
+      updateCounts();
+    }
+
+    function updateStats() {
+      const total = allTests.length;
+      const running = allTests.filter(t => t.status === 'running').length;
+      const successful = allTests.filter(t => t.status === 'success').length;
+      const completed = allTests.filter(t => ['success', 'failed', 'inconclusive'].includes(t.status)).length;
+      const winRate = completed > 0 ? Math.round((successful / completed) * 100) : 0;
+      document.getElementById('stat-total').textContent = total;
+      document.getElementById('stat-running').textContent = running;
+      document.getElementById('stat-success').textContent = successful;
+      document.getElementById('stat-winrate').textContent = winRate + '%';
+    }
+
+    function updateCounts() {
+      document.getElementById('count-all').textContent = allTests.length;
+      document.getElementById('count-idea').textContent = allTests.filter(t => t.status === 'idea').length;
+      document.getElementById('count-running').textContent = allTests.filter(t => t.status === 'running').length;
+      document.getElementById('count-completed').textContent = allTests.filter(t => ['success', 'failed', 'inconclusive'].includes(t.status)).length;
+    }
+
+    // ========== FILTERS ==========
+    function setFilter(filter, el) {
+      currentFilter = filter;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      render();
+    }
+
+    // ========== METRIC HELPERS ==========
+    function toggleCustomMetric(type) {
+      const sel = document.getElementById('f-' + type + '-metric');
+      const cust = document.getElementById('f-' + type + '-metric-custom');
+      cust.style.display = sel.value === 'other' ? 'block' : 'none';
+      if (sel.value !== 'other') cust.value = '';
+    }
+    function getMetricValue(type) {
+      const sel = document.getElementById('f-' + type + '-metric');
+      return sel.value === 'other' ? document.getElementById('f-' + type + '-metric-custom').value.trim() : sel.value;
+    }
+    function setMetricDropdown(type, value) {
+      const sel = document.getElementById('f-' + type + '-metric');
+      const cust = document.getElementById('f-' + type + '-metric-custom');
+      const opts = Array.from(sel.options).map(o => o.value);
+      if (value && !opts.includes(value)) {
+        sel.value = 'other';
+        cust.value = value;
+        cust.style.display = 'block';
+      } else {
+        sel.value = value || '';
+        cust.value = '';
+        cust.style.display = 'none';
+      }
+    }
+
+    // ========== VARIANT HELPERS ==========
+    let variantCounter = 0;
+
+    function addVariantRow(description, result) {
+      const container = document.getElementById('variants-container');
+      const resContainer = document.getElementById('variant-results-container');
+      const idx = container.children.length;
+      const letter = getVariantLetter(idx);
+      const rowId = 'vr_' + (variantCounter++);
+
+      const row = document.createElement('div');
+      row.className = 'variant-row';
+      row.id = rowId;
+      row.innerHTML = '<span class="v-label">' + letter + '</span>' +
+        '<input type="text" class="v-desc" placeholder="Variant ' + letter + ' description" value="' + escapeHtml(description || '') + '">' +
+        '<button type="button" class="variant-remove" onclick="removeVariantRow(\'' + rowId + '\')">&times;</button>';
+      container.appendChild(row);
+
+      const resRow = document.createElement('div');
+      resRow.className = 'form-group';
+      resRow.id = rowId + '-res';
+      resRow.innerHTML = '<label>Variant ' + letter + ' Result</label>' +
+        '<input type="text" class="v-result" placeholder="e.g., 4.1% CTR" value="' + escapeHtml(result || '') + '">';
+      resContainer.appendChild(resRow);
+
+      relabelVariants();
+    }
+
+    function removeVariantRow(rowId) {
+      const r = document.getElementById(rowId);
+      const rr = document.getElementById(rowId + '-res');
+      if (r) r.remove();
+      if (rr) rr.remove();
+      relabelVariants();
+    }
+
+    function relabelVariants() {
+      const rows = document.getElementById('variants-container').children;
+      const resRows = document.getElementById('variant-results-container').children;
+      Array.from(rows).forEach((r, i) => {
+        const l = getVariantLetter(i);
+        r.querySelector('.v-label').textContent = l;
+        r.querySelector('.v-desc').placeholder = 'Variant ' + l + ' description';
+      });
+      Array.from(resRows).forEach((r, i) => {
+        const l = getVariantLetter(i);
+        const lab = r.querySelector('label');
+        if (lab) lab.textContent = 'Variant ' + l + ' Result';
+      });
+    }
+
+    function collectVariants() {
+      const rows = Array.from(document.getElementById('variants-container').children);
+      const resRows = Array.from(document.getElementById('variant-results-container').children);
+      return rows.map((r, i) => ({
+        id: generateId(),
+        name: getVariantLetter(i),
+        description: r.querySelector('.v-desc').value.trim(),
+        result: resRows[i] ? resRows[i].querySelector('.v-result').value.trim() : ''
+      }));
+    }
+
+    // ========== MODAL ==========
+    function openNewTestModal() {
+      document.getElementById('modal-title').textContent = 'New Split Test';
+      document.getElementById('edit-id').value = '';
+      document.getElementById('f-hypothesis').value = '';
+      document.getElementById('f-what').value = '';
+      document.getElementById('f-page').value = '';
+      setMetricDropdown('primary', '');
+      setMetricDropdown('secondary', '');
+      document.getElementById('f-control-desc').value = '';
+      document.getElementById('f-control-result').value = '';
+      document.getElementById('variants-container').innerHTML = '';
+      document.getElementById('variant-results-container').innerHTML = '';
+      addVariantRow();
+      document.getElementById('f-start').value = new Date().toISOString().split('T')[0];
+      document.getElementById('f-end').value = '';
+      document.getElementById('f-status').value = 'idea';
+      document.getElementById('f-confidence').value = '';
+      document.getElementById('f-takeaway').value = '';
+      document.getElementById('modal-overlay').classList.add('open');
+    }
+
+    function openEditModal(id) {
+      const test = allTests.find(t => t.id === id);
+      if (!test) return;
+      document.getElementById('modal-title').textContent = 'Edit Split Test';
+      document.getElementById('edit-id').value = id;
+      document.getElementById('f-hypothesis').value = test.hypothesis || '';
+      document.getElementById('f-what').value = test.what || '';
+      document.getElementById('f-page').value = test.page || '';
+      setMetricDropdown('primary', test.primaryMetric || '');
+      setMetricDropdown('secondary', test.secondaryMetric || '');
+      document.getElementById('f-control-desc').value = test.control?.description || '';
+      document.getElementById('f-control-result').value = test.control?.result || '';
+      document.getElementById('variants-container').innerHTML = '';
+      document.getElementById('variant-results-container').innerHTML = '';
+      (test.variants || []).forEach(v => addVariantRow(v.description, v.result));
+      if (!test.variants || test.variants.length === 0) addVariantRow();
+      document.getElementById('f-start').value = test.startDate || '';
+      document.getElementById('f-end').value = test.endDate || '';
+      document.getElementById('f-status').value = test.status || 'idea';
+      document.getElementById('f-confidence').value = test.confidence || '';
+      document.getElementById('f-takeaway').value = test.takeaway || '';
+      document.getElementById('modal-overlay').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('modal-overlay').classList.remove('open');
+    }
+
+    function saveTest() {
+      const id = document.getElementById('edit-id').value;
+      const testData = {
+        hypothesis: document.getElementById('f-hypothesis').value.trim(),
+        what: document.getElementById('f-what').value.trim(),
+        page: document.getElementById('f-page').value.trim(),
+        primaryMetric: getMetricValue('primary'),
+        secondaryMetric: getMetricValue('secondary'),
+        control: {
+          description: document.getElementById('f-control-desc').value.trim(),
+          result: document.getElementById('f-control-result').value.trim()
+        },
+        variants: collectVariants(),
+        startDate: document.getElementById('f-start').value,
+        endDate: document.getElementById('f-end').value,
+        status: document.getElementById('f-status').value,
+        confidence: document.getElementById('f-confidence').value.trim(),
+        takeaway: document.getElementById('f-takeaway').value.trim(),
+      };
+
+      if (!testData.hypothesis) { alert('Please enter a hypothesis.'); return; }
+
+      if (id) {
+        const idx = allTests.findIndex(t => t.id === id);
+        if (idx >= 0) allTests[idx] = { ...allTests[idx], ...testData, updatedAt: new Date().toISOString() };
+      } else {
+        allTests.push({ id: generateId(), ...testData, notes: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+      }
+
+      saveTests(allTests);
+      closeModal();
+      render();
+      if (id && document.getElementById('detail-panel').classList.contains('open')) openDetail(id);
+    }
+
+    // ========== DETAIL PANEL ==========
+    function openDetail(id) {
+      const test = allTests.find(t => t.id === id);
+      if (!test) return;
+
+      const duration = calculateDuration(test.startDate, test.endDate);
+      const variantsHtml = (test.variants || []).map(v =>
+        '<div class="variant-card"><div class="card-label">Variant ' + escapeHtml(v.name) + '</div>' +
+        '<p style="font-size:14px;">' + escapeHtml(v.description || '\u2014') + '</p>' +
+        '<div style="margin-top:6px;font-size:13px;color:var(--text-muted);">Result: <strong style="color:var(--text)">' + escapeHtml(v.result || '\u2014') + '</strong></div></div>'
+      ).join('');
+
+      const notesHtml = (test.notes || []).map(n =>
+        '<div class="note-item"><div class="note-date">' + new Date(n.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + '</div>' +
+        '<div class="note-text">' + escapeHtml(n.text) + '</div></div>'
+      ).join('') || '<p style="color:var(--text-muted);font-size:13px;">No meeting notes yet.</p>';
+
+      document.getElementById('detail-content').innerHTML =
+        '<div class="detail-meta">' +
+          '<div class="meta-item"><div class="label">Status</div><div class="value">' + getStatusBadge(test.status) + '</div></div>' +
+          '<div class="meta-item"><div class="label">Dates</div><div class="value">' + getDateRange(test.startDate, test.endDate) + '</div></div>' +
+          '<div class="meta-item"><div class="label">Duration</div><div class="value">' + (duration || '\u2014') + '</div></div>' +
+          '<div class="meta-item"><div class="label">Primary Metric</div><div class="value">' + escapeHtml(test.primaryMetric || '\u2014') + '</div></div>' +
+          '<div class="meta-item"><div class="label">Secondary Metric</div><div class="value">' + escapeHtml(test.secondaryMetric || '\u2014') + '</div></div>' +
+          '<div class="meta-item"><div class="label">Confidence</div><div class="value">' + escapeHtml(test.confidence || '\u2014') + '</div></div>' +
+        '</div>' +
+        '<div class="detail-section"><h3>Hypothesis</h3><p>' + escapeHtml(test.hypothesis || '\u2014') + '</p></div>' +
+        '<div class="detail-section"><h3>What We\'re Testing</h3><p>' + escapeHtml(test.what || '\u2014') + '</p></div>' +
+        '<div class="detail-section"><h3>Page / Element</h3><p>' + escapeHtml(test.page || '\u2014') + '</p></div>' +
+        '<div class="detail-section"><h3>Control & Variants</h3>' +
+          '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">' +
+            '<div class="variant-card control-card"><div class="card-label">Control (A)</div>' +
+            '<p style="font-size:14px;">' + escapeHtml(test.control?.description || '\u2014') + '</p>' +
+            '<div style="margin-top:6px;font-size:13px;color:var(--text-muted);">Result: <strong style="color:var(--text)">' + escapeHtml(test.control?.result || '\u2014') + '</strong></div></div>' +
+            variantsHtml +
+          '</div>' +
+        '</div>' +
+        '<div class="detail-section"><h3>Key Takeaway</h3><p>' + escapeHtml(test.takeaway || 'No takeaway recorded yet.') + '</p></div>' +
+        '<div class="detail-section"><h3>Meeting Notes</h3>' +
+          '<div class="notes-list">' + notesHtml + '</div>' +
+          '<div class="add-note-area"><textarea id="new-note-' + test.id + '" placeholder="Add a meeting note..."></textarea>' +
+          '<button class="btn btn-primary btn-sm" style="align-self:flex-end;" onclick="addNote(\'' + test.id + '\')">Add</button></div>' +
+        '</div>' +
+        '<div class="detail-actions">' +
+          '<button class="btn btn-primary btn-sm" onclick="closeDetail(); openEditModal(\'' + test.id + '\')">Edit Test</button>' +
+          '<button class="btn btn-danger btn-sm" onclick="confirmDelete(\'' + test.id + '\')">Delete</button>' +
+        '</div>';
+
+      document.getElementById('detail-title').textContent = test.what || 'Test Details';
+      document.getElementById('detail-overlay').classList.add('open');
+      setTimeout(() => document.getElementById('detail-panel').classList.add('open'), 10);
+    }
+
+    function closeDetail() {
+      document.getElementById('detail-panel').classList.remove('open');
+      setTimeout(() => document.getElementById('detail-overlay').classList.remove('open'), 250);
+    }
+
+    // ========== NOTES ==========
+    function addNote(testId) {
+      const textarea = document.getElementById('new-note-' + testId);
+      const text = textarea.value.trim();
+      if (!text) return;
+      const idx = allTests.findIndex(t => t.id === testId);
+      if (idx < 0) return;
+      if (!allTests[idx].notes) allTests[idx].notes = [];
+      allTests[idx].notes.push({ date: new Date().toISOString(), text });
+      allTests[idx].updatedAt = new Date().toISOString();
+      saveTests(allTests);
+      openDetail(testId);
+    }
+
+    // ========== DELETE ==========
+    let pendingDeleteId = null;
+    function confirmDelete(id) {
+      pendingDeleteId = id;
+      document.getElementById('confirm-overlay').classList.add('open');
+      document.getElementById('confirm-delete-btn').onclick = () => {
+        allTests = allTests.filter(t => t.id !== pendingDeleteId);
+        saveTests(allTests);
+        closeConfirm(); closeDetail(); render();
+      };
+    }
+    function closeConfirm() {
+      document.getElementById('confirm-overlay').classList.remove('open');
+      pendingDeleteId = null;
+    }
+
+    // ========== EXPORT ==========
+    function exportData() {
+      const blob = new Blob([JSON.stringify(allTests, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'split-tests-' + new Date().toISOString().split('T')[0] + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // ========== DASHBOARD ==========
+    function renderDashboard() {
+      const completed = allTests.filter(t => ['success', 'failed', 'inconclusive'].includes(t.status));
+      const wins = allTests.filter(t => t.status === 'success');
+      const winRate = completed.length > 0 ? Math.round((wins.length / completed.length) * 100) : 0;
+
+      // Avg duration
+      let totalDays = 0, countDur = 0;
+      completed.forEach(t => {
+        if (t.startDate && t.endDate) {
+          const d = (new Date(t.endDate + 'T00:00:00') - new Date(t.startDate + 'T00:00:00')) / (1000*60*60*24);
+          if (d >= 0) { totalDays += d; countDur++; }
+        }
+      });
+      const avgDur = countDur > 0 ? Math.round(totalDays / countDur) + 'd' : '--';
+
+      document.getElementById('dash-completed').textContent = completed.length;
+      document.getElementById('dash-wins').textContent = wins.length;
+      document.getElementById('dash-winrate').textContent = winRate + '%';
+      document.getElementById('dash-avgduration').textContent = avgDur;
+
+      drawWinRateChart(completed);
+      drawOutcomesChart(completed);
+    }
+
+    function drawWinRateChart(completed) {
+      const canvas = document.getElementById('chart-winrate');
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const w = canvas.offsetWidth;
+      const h = canvas.offsetHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, w, h);
+
+      // Build monthly data
+      const sorted = [...completed].sort((a, b) => (a.endDate || a.startDate || '').localeCompare(b.endDate || b.startDate || ''));
+      if (sorted.length === 0) {
+        ctx.fillStyle = '#8b8fa3';
+        ctx.font = '14px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('No completed tests yet', w / 2, h / 2);
+        return;
+      }
+
+      const months = {};
+      let cumWins = 0, cumTotal = 0;
+      sorted.forEach(t => {
+        const d = t.endDate || t.startDate || '';
+        if (!d) return;
+        const key = d.substring(0, 7);
+        cumTotal++;
+        if (t.status === 'success') cumWins++;
+        months[key] = Math.round((cumWins / cumTotal) * 100);
+      });
+
+      const keys = Object.keys(months);
+      const values = keys.map(k => months[k]);
+      const pad = { top: 24, right: 20, bottom: 36, left: 44 };
+      const cw = w - pad.left - pad.right;
+      const ch = h - pad.top - pad.bottom;
+
+      // Grid
+      ctx.strokeStyle = '#2e3345';
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i <= 4; i++) {
+        const y = pad.top + (ch / 4) * i;
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(w - pad.right, y); ctx.stroke();
+        ctx.fillStyle = '#8b8fa3';
+        ctx.font = '11px -apple-system, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText((100 - 25 * i) + '%', pad.left - 8, y + 4);
+      }
+
+      // Line
+      ctx.strokeStyle = '#6c5ce7';
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      values.forEach((v, i) => {
+        const x = pad.left + (keys.length > 1 ? (cw / (keys.length - 1)) * i : cw / 2);
+        const y = pad.top + ch - (v / 100) * ch;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      // Fill area
+      const lastX = pad.left + (keys.length > 1 ? cw : cw / 2);
+      ctx.lineTo(lastX, pad.top + ch);
+      ctx.lineTo(pad.left + (keys.length > 1 ? 0 : cw / 2), pad.top + ch);
+      ctx.closePath();
+      ctx.globalAlpha = 0.08;
+      ctx.fillStyle = '#6c5ce7';
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Dots + labels
+      values.forEach((v, i) => {
+        const x = pad.left + (keys.length > 1 ? (cw / (keys.length - 1)) * i : cw / 2);
+        const y = pad.top + ch - (v / 100) * ch;
+        ctx.fillStyle = '#6c5ce7';
+        ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#8b8fa3';
+        ctx.font = '10px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        const label = keys[i].substring(5) + '/' + keys[i].substring(2, 4);
+        ctx.fillText(label, x, h - pad.bottom + 14);
+      });
+    }
+
+    function drawOutcomesChart(completed) {
+      const canvas = document.getElementById('chart-outcomes');
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const w = canvas.offsetWidth;
+      const h = canvas.offsetHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, w, h);
+
+      const sorted = [...completed].sort((a, b) => (a.endDate || a.startDate || '').localeCompare(b.endDate || b.startDate || ''));
+      if (sorted.length === 0) {
+        ctx.fillStyle = '#8b8fa3';
+        ctx.font = '14px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('No completed tests yet', w / 2, h / 2);
+        return;
+      }
+
+      // Cumulative stacked data by month
+      const months = {};
+      let cumW = 0, cumF = 0, cumI = 0;
+      sorted.forEach(t => {
+        const d = t.endDate || t.startDate || '';
+        if (!d) return;
+        const key = d.substring(0, 7);
+        if (t.status === 'success') cumW++;
+        else if (t.status === 'failed') cumF++;
+        else cumI++;
+        months[key] = { wins: cumW, failures: cumF, inconclusive: cumI, total: cumW + cumF + cumI };
+      });
+
+      const keys = Object.keys(months);
+      const maxVal = Math.max(...Object.values(months).map(m => m.total), 1);
+      const pad = { top: 24, right: 20, bottom: 36, left: 44 };
+      const cw = w - pad.left - pad.right;
+      const ch = h - pad.top - pad.bottom;
+      const barW = Math.min(40, cw / keys.length - 8);
+
+      // Grid
+      const steps = Math.min(maxVal, 5);
+      for (let i = 0; i <= steps; i++) {
+        const y = pad.top + (ch / steps) * i;
+        ctx.strokeStyle = '#2e3345';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(w - pad.right, y); ctx.stroke();
+        ctx.fillStyle = '#8b8fa3';
+        ctx.font = '11px -apple-system, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(Math.round(maxVal - (maxVal / steps) * i), pad.left - 8, y + 4);
+      }
+
+      // Stacked bars
+      keys.forEach((key, i) => {
+        const m = months[key];
+        const x = pad.left + (cw / keys.length) * i + (cw / keys.length - barW) / 2;
+
+        // Wins (green)
+        const wH = (m.wins / maxVal) * ch;
+        ctx.fillStyle = '#00b894';
+        ctx.fillRect(x, pad.top + ch - wH, barW, wH);
+
+        // Failures (red) stacked on top
+        const fH = (m.failures / maxVal) * ch;
+        ctx.fillStyle = '#e17055';
+        ctx.fillRect(x, pad.top + ch - wH - fH, barW, fH);
+
+        // Inconclusive (yellow) on top
+        const iH = (m.inconclusive / maxVal) * ch;
+        ctx.fillStyle = '#fdcb6e';
+        ctx.fillRect(x, pad.top + ch - wH - fH - iH, barW, iH);
+
+        // X label
+        ctx.fillStyle = '#8b8fa3';
+        ctx.font = '10px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        const label = key.substring(5) + '/' + key.substring(2, 4);
+        ctx.fillText(label, x + barW / 2, h - pad.bottom + 14);
+      });
+
+      // Legend
+      const legendY = pad.top - 4;
+      [{ color: '#00b894', label: 'Wins' }, { color: '#e17055', label: 'Losses' }, { color: '#fdcb6e', label: 'Inconclusive' }].forEach((l, i) => {
+        const lx = w - pad.right - (3 - i) * 80;
+        ctx.fillStyle = l.color;
+        ctx.fillRect(lx, legendY - 8, 10, 10);
+        ctx.fillStyle = '#8b8fa3';
+        ctx.font = '10px -apple-system, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(l.label, lx + 14, legendY);
+      });
+    }
+
+    // ========== AI SUGGESTIONS ==========
+    function saveApiKey() {
+      const key = document.getElementById('ai-api-key').value.trim();
+      if (key && !key.startsWith('****')) {
+        localStorage.setItem(API_KEY_STORAGE, key);
+        document.getElementById('ai-api-key').value = '****' + key.slice(-6);
+      }
+    }
+    function loadApiKey() { return localStorage.getItem(API_KEY_STORAGE) || ''; }
+    function renderAIView() {
+      const k = loadApiKey();
+      document.getElementById('ai-api-key').value = k ? '****' + k.slice(-6) : '';
+    }
+
+    function buildSuggestionPrompt() {
+      const tests = allTests;
+      const wins = tests.filter(t => t.status === 'success');
+      const losses = tests.filter(t => t.status === 'failed');
+      let ctx = 'Here is my CRO split testing history:\n\n';
+
+      if (wins.length > 0) {
+        ctx += 'WINNING TESTS:\n';
+        wins.forEach(t => {
+          ctx += '- "' + t.hypothesis + '" on ' + (t.page || 'unknown page') + '. ';
+          ctx += 'Control: ' + (t.control?.description || '--') + ' (' + (t.control?.result || '--') + '). ';
+          const best = (t.variants || []).find(v => v.result);
+          if (best) ctx += 'Winner: Variant ' + best.name + ' - ' + best.description + ' (' + best.result + '). ';
+          if (t.takeaway) ctx += 'Takeaway: ' + t.takeaway + '. ';
+          ctx += '\n';
+        });
+        ctx += '\n';
+      }
+      if (losses.length > 0) {
+        ctx += 'LOSING TESTS:\n';
+        losses.forEach(t => {
+          ctx += '- "' + t.hypothesis + '" on ' + (t.page || 'unknown page') + '. ';
+          if (t.takeaway) ctx += 'Takeaway: ' + t.takeaway + '. ';
+          ctx += '\n';
+        });
+        ctx += '\n';
+      }
+
+      const ideas = tests.filter(t => t.status === 'idea');
+      if (ideas.length > 0) {
+        ctx += 'EXISTING IDEAS IN BACKLOG:\n';
+        ideas.forEach(t => { ctx += '- "' + t.hypothesis + '"\n'; });
+        ctx += '\n';
+      }
+
+      ctx += '\nBased on this testing history, suggest 5 new split test ideas that are DIFFERENT from existing ideas. For each:\n';
+      ctx += '1. A clear hypothesis\n2. What to test\n3. Which page\n4. Metric (Revenue per Visitor, Opt-in Rate, Revenue per Page Viewer, Attendance Rate, or other)\n5. Brief rationale\n\n';
+      ctx += 'Respond as a JSON array: [{hypothesis, what, page, primaryMetric, rationale}]';
+      return ctx;
+    }
+
+    async function generateSuggestions() {
+      const apiKey = loadApiKey();
+      if (!apiKey) { alert('Please enter your Claude API key first.'); return; }
+
+      const loading = document.getElementById('ai-loading');
+      const list = document.getElementById('ai-suggestions-list');
+      const error = document.getElementById('ai-error');
+      const btn = document.getElementById('ai-generate-btn');
+
+      loading.style.display = 'block';
+      list.innerHTML = '';
+      error.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+
+      try {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 2048,
+            messages: [{ role: 'user', content: buildSuggestionPrompt() }]
+          })
+        });
+
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.error?.message || 'API error: ' + response.status);
+        }
+
+        const data = await response.json();
+        const text = data.content[0].text;
+        const jsonMatch = text.match(/\[[\s\S]*\]/);
+        if (!jsonMatch) throw new Error('Could not parse suggestions.');
+        const suggestions = JSON.parse(jsonMatch[0]);
+        renderSuggestionCards(suggestions);
+      } catch (err) {
+        error.style.display = 'block';
+        error.innerHTML = '<div class="stat-card" style="padding:16px;border-color:var(--danger);"><p style="color:var(--danger);font-size:14px;">Error: ' + escapeHtml(err.message) + '</p></div>';
+      } finally {
+        loading.style.display = 'none';
+        btn.disabled = false;
+        btn.textContent = 'Generate Suggestions';
+      }
+    }
+
+    window._aiSuggestions = [];
+    function renderSuggestionCards(suggestions) {
+      window._aiSuggestions = suggestions;
+      document.getElementById('ai-suggestions-list').innerHTML = suggestions.map((s, i) =>
+        '<div class="suggestion-card">' +
+          '<h4>' + escapeHtml(s.hypothesis) + '</h4>' +
+          '<p>' + escapeHtml(s.rationale || '') + '</p>' +
+          '<div class="suggestion-meta">' +
+            '<span>Page: ' + escapeHtml(s.page || 'TBD') + '</span>' +
+            '<span>Metric: ' + escapeHtml(s.primaryMetric || 'TBD') + '</span>' +
+            '<span>Element: ' + escapeHtml(s.what || 'TBD') + '</span>' +
+          '</div>' +
+          '<button class="btn btn-primary btn-sm" onclick="createTestFromSuggestion(' + i + ')">+ Create Test</button>' +
+        '</div>'
+      ).join('');
+    }
+
+    function createTestFromSuggestion(index) {
+      const s = window._aiSuggestions[index];
+      if (!s) return;
+      switchView('tests');
+      openNewTestModal();
+      document.getElementById('f-hypothesis').value = s.hypothesis || '';
+      document.getElementById('f-what').value = s.what || '';
+      document.getElementById('f-page').value = s.page || '';
+      setMetricDropdown('primary', s.primaryMetric || '');
+    }
+
+    // ========== INIT ==========
+    render();
+  </script>
+</body>
+</html>
